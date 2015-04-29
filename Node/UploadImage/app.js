@@ -67,7 +67,7 @@ app.get('/getSharedListAlbum', home.getSharedListAlbum);
 app.post('/addGroupMember',home.addGroupMember);
 app.get('/getListGroups',home.getListGroups);
 app.post('/createAlbum',home.createAlbum);
-
+app.get('/getGroupMembers',home.getGroupMembers);
 
 
 /*

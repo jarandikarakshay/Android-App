@@ -545,6 +545,36 @@ function addFriend(req, res) {
 	}
 }
 
+function getGroupMembers(req, res) {
+	var groupname = req.param("groupname");
+	var username=req.param("username");
+	
+	
+	var query = "select (select username from user where iduser=gm.idmember) member_name from groupinfo gi, groupmembers gm where group_name='"+groupname+ "' and group_owner=(select iduser from user where username='" 
+		+ username + "' ) and gm.idowner=gi.group_owner and gm.idgroup=gi.idgroup;";
+
+	console.log("Query is:" + query);
+	var members = [];
+	mysql.fetchData(function(err, results) {
+		if (err) {
+			throw err;
+		} else {
+			// response logic ...
+			console.log("success...");
+			if (results.length > 0) {
+				// var file = './uploads/icon_3dgallery_mini1430024637400.png';
+				for (var i = 0; i < results.length; i++) {
+					members[i] = results[i].member_name;
+					console.log(members[i]);
+				}
+				var data = JSON.stringify(members);
+				res.end(data, 'text');
+			}
+		}
+	}, query);
+
+}
+
 /*
  * function getPhotos(req, res) { //var getRecords = "select * from image where
  * toUser = '" + req.param("userId")+ "'"; var getRecords = "select * from image
@@ -595,3 +625,4 @@ exports.createGroup=createGroup;
 exports.addGroupMember=addGroupMember;
 exports.getListGroups=getListGroups;
 exports.createAlbum=createAlbum;
+exports.getGroupMembers=getGroupMembers;
