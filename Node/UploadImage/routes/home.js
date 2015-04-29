@@ -1,0 +1,498 @@
+var ejs = require("ejs");
+var mysql = require('./mysql');
+var fs = require('fs');
+
+function upload(req, res) {
+
+	ejs.renderFile('./views/upload.ejs', function(err, result) {
+		// render on success
+		if (!err) {
+			res.end(result);
+		}
+		// render or error
+		else {
+			res.end('An error occurred');
+			console.log(err);
+		}
+	});
+}
+
+function signIn(req, res) {
+	var query = "select * from user where username = '" + req.param("username")
+			+ "'";
+	var password = req.param("password");
+	console.log("Query is:" + query);
+	mysql.fetchData(function(err, results) {
+		if (err) {
+			throw err;
+		} else {
+			if (results.length > 0) {
+				if (results[0].password == password) {
+					console.log("success...");
+					res.end("success", "text");
+				}
+			} else {
+				console.log("failure...");
+				res.end(null, "text");
+			}
+
+		}
+	}, query);
+
+}
+
+function signUp(req, res) {
+	var username = req.param("username");
+	var password = req.param("password");
+	var emailId = req.param("emailId");
+
+	var query = "insert into user(username, password, emailId) values ('"
+			+ username + "', '" + password + "', '" + emailId + "')";
+	console.log("Query is:" + query);
+	mysql.fetchData(function(err, results) {
+		if (err) {
+			throw err;
+		} else {
+			if (results.length > 0) {
+				console.log("success...");
+				res.end("success", "text");
+			} else {
+				res.end("Username or Password not correct", "text");
+			}
+
+		}
+	}, query);
+
+}
+
+function saveToMySql(req, res) {
+	// console.log(req);
+	console.log("User:" + req.user);
+	var file = req.files.image;
+	var s = file.mimetype;
+	var i = 0;
+	var fromUser = "";
+	var album = "";
+	do {
+		fromUser += s.charAt(i);
+		i++;
+		if (s.charAt(i) === '|') {
+			i++;
+			break;
+		}
+	} while (i < s.length);
+	for (var j = i; j < s.length; j++) {
+		album += s.charAt(j);
+	}
+	console.log("fromUser: " + fromUser);
+	console.log("Album: " + album);
+	var query = "select * from album where AlbumName = '" + album
+			+ "' and owner = '" + fromUser + "'";
+
+	console.log("Query is:" + query);
+
+	mysql
+			.fetchData(
+					function(err, results) {
+						if (err) {
+							throw err;
+						} else {
+							// response logic ...
+							console.log("success...");
+
+							var innerQuery = "insert into image(imageName, caption, path, fromUser, toUser, dateTime, flagRead, idAlbum) values ('"
+									+ file.name
+									+ "', '"
+									+ "caption"
+									+ "', 'uploads\\\\"
+									+ file.name
+									+ "', '"
+									+ fromUser
+									+ " ', ' ','"
+									+ new Date().toISOString().slice(0, 19)
+											.replace('T', ' ')
+									+ "',  1, "
+									+ results[0].idAlbum + " )";
+
+							console.log("Query is:" + innerQuery);
+							mysql.fetchData(function(err, results) {
+								if (err) {
+									throw err;
+								} else {
+									// response logic ...
+									console.log("success...");
+								}
+							}, innerQuery);
+						}
+					}, query);
+	res.render("success");
+}
+
+function getImage(req, res) {
+
+	var query = "select * from image where imageName = '"
+			+ req.param("imageName") + "'";
+
+	// where fromUser = '" + req.fromUser + "'";
+
+	console.log("Query is:" + query);
+	mysql.fetchData(function(err, results) {
+		if (err) {
+			throw err;
+		} else {
+			// response logic ...
+			console.log("success...");
+			if (results.length > 0) {
+
+				var file = results[0].path;
+				fs.stat(file, function(err, stat) {
+					var img = fs.readFileSync(file);
+					res.contentType = 'image/png';
+					res.contentLength = stat.size;
+					// var data = JSON.stringify(images);
+
+					res.end(img, 'binary');
+
+					// res.end(JSON.stringify(images));
+				});
+
+			}
+		}
+	}, query);
+
+}
+
+function getListImages(req, res) {
+	
+	var albumName = req.param("albumName");
+	albumName = albumName.substring(1, albumName.length - 1);
+	var query = "select * from image where "; // where fromUser = '" +
+												// req.fromUser +
+	// "'";
+
+	var query = "select i.imageName from image i, album a where AlbumName = '"
+			+ albumName + "' and a.idAlbum = i.idAlbum";
+
+	console.log("Query is:" + query);
+	var files = [];
+	var i = 0;
+	mysql.fetchData(function(err, results) {
+		if (err) {
+			throw err;
+		} else {
+			// response logic ...
+			console.log("success...");
+			if (results.length > 0) {
+				// var file = './uploads/icon_3dgallery_mini1430024637400.png';
+				for (var i = 0; i < results.length; i++) {
+					files[i] = results[i].imageName;
+					console.log(files[i]);
+				}
+				var data = JSON.stringify(files);
+				res.end(data, 'text');
+			}
+		}
+	}, query);
+
+}
+
+function getListAlbum(req, res) {
+	var query = "select * from album where owner = '" + req.param("username")
+			+ "'";
+
+	console.log("Query is:" + query);
+	var albums = [];
+	mysql.fetchData(function(err, results) {
+		if (err) {
+			throw err;
+		} else {
+			// response logic ...
+			console.log("success...");
+			if (results.length > 0) {
+				// var file = './uploads/icon_3dgallery_mini1430024637400.png';
+				for (var i = 0; i < results.length; i++) {
+					albums[i] = results[i].AlbumName;
+					console.log(albums[i]);
+				}
+				var data = JSON.stringify(albums);
+				res.end(data, 'text');
+			}
+		}
+	}, query);
+
+}
+
+function getSharedListAlbum(req, res) {
+
+	var finalAlbumList = [];
+
+	var query = "select al.albumName from user u, album_sharing a,album al where username= '"
+			+ req.param("username")
+			+ "' and u.idUser=a.idUser and a.idAlbum=al.idAlbum ;"
+
+	// var query = "select * from user where username = '" +
+	// req.param("username")
+	// + "'";
+
+	console.log("Query is:" + query);
+
+	mysql.fetchData(function(err, results) {
+		if (err) {
+			throw err;
+		} else {
+			var list = [];
+			for (var i = 0; i < results.length; i++) {
+				list[i] = results[i].albumName;
+			}
+			var data = JSON.stringify(list);
+			res.end(data, 'text');
+
+		}
+
+	}, query);
+
+}
+
+function getListUser(req, res) {
+	var username = req.param("username");
+	var query = "select * from user where username != '" + username + "'";
+
+	console.log("Query is:" + query);
+	var users = [];
+	mysql.fetchData(function(err, results) {
+		if (err) {
+			throw err;
+		} else {
+			// response logic ...
+			console.log("success...");
+			if (results.length > 0) {
+				// var file = './uploads/icon_3dgallery_mini1430024637400.png';
+				for (var i = 0; i < results.length; i++) {
+					users[i] = results[i].username;
+					console.log(users[i]);
+				}
+				var data = JSON.stringify(users);
+				res.end(data, 'text');
+			}
+		}
+	}, query);
+
+}
+
+function getMyFriends(req, res) {
+	var username = req.param("username");
+	var query = "select * from user where username != '" + username + "'";
+
+	console.log("Query is:" + query);
+	mysql.fetchData(function(err, result) {
+		if (err) {
+			throw err;
+		} else {
+			if (result.length > 0) {
+				var idUser = result[0].idUser;
+
+				var inquery = "select * from friends where friend1 = '"
+						+ username + "' or friend2 = '" + username + "'";
+
+				console.log("Query is:" + inquery);
+				mysql.fetchData(function(err, results) {
+					if (err) {
+						throw err;
+					} else {
+						var users = [];
+						var size = 0;
+						if (results.length > 0) {
+							for (var i = 0; i < results.length; i++) {
+								if (results[i].friend1 != username) {
+									users[size] = results[i].friend1;
+									console.log(users[size]);
+								}
+								if (results[i].friend2 != username) {
+									users[i] = results[i].friend2;
+									console.log(users[size]);
+								}
+								size++;
+							}
+							users.sort();
+							var finalUsers = [];
+							size = 0;
+							var length = users.length;
+							for (var i = 0; i < length - 1; i++) {
+								if (users[i] != users[i + 1]) {
+									finalUsers[size++] = users[i];
+								}
+							}
+							finalUsers[size++] = users[length - 1];
+							var data = JSON.stringify(finalUsers);
+							res.end(data, 'text');
+						}
+					}
+				}, inquery);
+
+			}
+		}
+	}, query);
+
+}
+
+function shareAlbum(req, res) {
+	var albumName = req.param("albumName");
+	albumName = albumName.substring(1, albumName.length - 1);
+	var toUser = req.param("toUser");
+	toUser = toUser.substring(1, toUser.length - 1);
+	var query = "select * from album where AlbumName = '" + albumName + "'";
+
+	console.log("Query is:" + query);
+	mysql
+			.fetchData(
+					function(err, result) {
+						if (err) {
+							throw err;
+						} else {
+							if (result.length > 0) {
+								var idAlbum = result[0].idAlbum;
+								var inquery = "select * from user where username = '"
+										+ toUser + "'";
+
+								console.log("Query is:" + inquery);
+								mysql
+										.fetchData(
+												function(err, results) {
+													if (err) {
+														throw err;
+													} else {
+
+														var idUser = results[0].idUser;
+														var innerQuery = "insert into album_sharing values ("
+																+ idAlbum
+																+ ", "
+																+ idUser
+																+ ")";
+
+														console.log("Query is:"
+																+ innerQuery);
+														mysql
+																.fetchData(
+																		function(
+																				err,
+																				results) {
+																			if (err) {
+																				throw err;
+																			} else {
+
+																				console
+																						.log("success..------------------------");
+																				res
+																						.end(
+																								"success",
+																								"text");
+
+																			}
+																		},
+																		innerQuery);
+
+													}
+												}, inquery);
+
+							}
+						}
+					}, query);
+
+}
+
+function addFriend(req, res) {
+	var username = req.param("username");
+	var friend = req.param("friend");
+	friend = friend.substring(1, friend.length - 1);
+	if (friend == username) {
+		res.end("Duplicate", 'text');
+	} else {
+		var query = "select * from user where username = '" + username
+				+ "' or username = '" + friend + "'";
+
+		console.log("Query is:" + query);
+		mysql
+				.fetchData(
+						function(err, results) {
+							if (err) {
+								throw err;
+							} else {
+								// response logic ...
+								console.log("success...");
+								if (results.length > 0) {
+									console.log("in****************"
+											+ results.length);
+									for (var i = 0; i < results.length; i++) {
+										console.log(results[i].username);
+									}
+
+									var innerQuery = "insert into friends(friend1, friend2) values('"
+											+ results[0].username
+											+ "', '"
+											+ results[1].username + "')";
+
+									console.log("Query is:" + innerQuery);
+									mysql.fetchData(function(err, result) {
+										if (err) {
+											throw err;
+										} else {
+											// response logic ...
+											console.log("success...");
+											console.log("Result:"
+													+ result.length);
+											res.end("success", 'text');
+
+										}
+									}, innerQuery);
+								}
+							}
+						}, query);
+	}
+}
+
+/*
+ * function getPhotos(req, res) { //var getRecords = "select * from image where
+ * toUser = '" + req.param("userId")+ "'"; var getRecords = "select * from image
+ * where idAlbum = 1"; console.log("Query is:" + getRecords);
+ * 
+ * mysql.fetchData(function(err,results){ if(err){ throw err; } else {
+ * if(results.length > 0){
+ * 
+ * var rows = results; var jsonString = JSON.stringify(results); var jsonParse =
+ * JSON.parse(jsonString);
+ * 
+ * console.log("Path:" + results[0].path); var img = new Image();
+ * 
+ * 
+ * 
+ * 
+ * console.log("Results Type: "+(typeof results)); console.log("Result Element
+ * Type:"+(typeof rows[0].emailid)); console.log("Results Stringify
+ * Type:"+(typeof jsonString)); console.log("Results Parse Type:"+(typeof
+ * jsString));
+ * 
+ * console.log("Results: "+(results)); console.log("Result
+ * Element:"+(rows[0].emailid)); console.log("Results Stringify:"+(jsonString));
+ * console.log("Results Parse:"+(jsonParse));
+ * 
+ * ejs.renderFile('./views/successLogin.ejs',{data:jsonParse},function(err,
+ * result) { // render on success if (!err) { res.end(result); } // render or
+ * error else { res.end('An error occurred'); console.log(err); } }); } else {
+ * 
+ * console.log("No users found in database");
+ * ejs.renderFile('./views/failLogin.ejs',function(err, result) { // render on
+ * success if (!err) { res.end(result); } // render or error else { res.end('An
+ * error occurred'); console.log(err); } }); } } },getRecords); }
+ */
+exports.upload = upload;
+exports.saveToMySql = saveToMySql;
+exports.getImage = getImage;
+exports.getListImages = getListImages;
+exports.signIn = signIn;
+exports.signUp = signUp;
+exports.getListAlbum = getListAlbum;
+exports.getListUser = getListUser;
+exports.addFriend = addFriend;
+exports.getMyFriends = getMyFriends;
+exports.shareAlbum = shareAlbum;
+exports.getSharedListAlbum = getSharedListAlbum;
