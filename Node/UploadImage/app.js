@@ -49,6 +49,28 @@ app.post('/storePhoto',function(req,res){
   }
 });
 
+
+app.get('/', home.upload);
+app.post('/signIn', home.signIn);
+app.post('/signUp', home.signUp);
+
+app.get('/saveToMySql', home.saveToMySql);
+app.get('/getListAlbum', home.getListAlbum);
+app.get('/getImage', home.getImage);
+app.get('/getListImages', home.getListImages);
+app.get('/getListUser', home.getListUser);
+app.post('/addFriend', home.addFriend);
+app.post('/createGroup', home.createGroup);
+app.get('/getMyFriends', home.getMyFriends);
+app.post('/shareAlbum', home.shareAlbum);
+app.get('/getSharedListAlbum', home.getSharedListAlbum);
+app.post('/addGroupMember',home.addGroupMember);
+app.get('/getListGroups',home.getListGroups);
+app.post('/createAlbum',home.createAlbum);
+
+
+
+/*
 app.get('/', home.upload);
 app.post('/signIn', home.signIn);
 app.post('/signUp', home.signUp);
@@ -62,6 +84,8 @@ app.post('/addFriend', home.addFriend);
 app.get('/getMyFriends', home.getMyFriends);
 app.post('/shareAlbum', home.shareAlbum);
 app.get('/getSharedListAlbum', home.getSharedListAlbum);
+*/
+
 
 http.createServer(app).listen(app.get('port'), function(){
 	  console.log('Express server listening on port ' + app.get('port'));
