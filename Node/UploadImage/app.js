@@ -74,6 +74,7 @@ app.get('/searchImage', home.searchImage);
 app.post('/shareAlbumGroup',home.shareAlbumGroup);
 app.get('/getCaption', home.getCaption);
 app.post('/addComment', home.addComment);
+app.post('/getComments', home.getComments);
 /*
 app.get('/', home.upload);
 app.post('/signIn', home.signIn);
