@@ -53,12 +53,9 @@ function signUp(req, res) {
 		if (err) {
 			throw err;
 		} else {
-			if (results.length > 0) {
-				console.log("success...");
-				res.end("success", "text");
-			} else {
-				res.end("Username or Password not correct", "text");
-			}
+
+			console.log("success...");
+			res.end("success", "text");
 
 		}
 	}, query);
@@ -68,37 +65,37 @@ function signUp(req, res) {
 function createAlbum(req, res) {
 	var albumname = req.param("albumname");
 	var owner = req.param("username");
-	
-	var query = "insert into album (albumname,owner) values ('"
-			+ albumname + "','"+ owner+ "');";
+
+	var query = "insert into album (albumname,owner) values ('" + albumname
+			+ "','" + owner + "');";
 	console.log("Query is:" + query);
 	mysql.fetchData(function(err, results) {
 		if (err) {
 			throw err;
 		} else {
-			
-				console.log("success...");
-				res.end("success", "text");
-			
+
+			console.log("success...");
+			res.end("success", "text");
+
 		}
 	}, query);
 
 }
 
-
 function createGroup(req, res) {
 	var groupName = req.param("groupname");
 	var groupOwner = req.param("username");
-	
+
 	var query = "insert into groupinfo (group_name,group_owner) values ('"
-			+ groupName + "', (select idUser from user where username='" + groupOwner + "'));";
+			+ groupName + "', (select idUser from user where username='"
+			+ groupOwner + "'));";
 	console.log("Query is:" + query);
 	mysql.fetchData(function(err, results) {
 		if (err) {
 			throw err;
 		} else {
-				console.log("success...");
-				res.end("success", "text");
+			console.log("success...");
+			res.end("success", "text");
 		}
 	}, query);
 
@@ -108,28 +105,28 @@ function addGroupMember(req, res) {
 	var groupName = req.param("groupname");
 	var membername = req.param("membername");
 	var groupOwner = req.param("username");
-	
-	
-	
+
+	groupName = groupName.substring(1, groupName.length - 1);
+	membername = membername.substring(1, membername.length - 1);
+
 	var query = "insert into groupmembers (idgroup,idmember,idowner) values ((select idgroup from groupinfo where group_name='"
-			+ groupName + "'), (select idUser from user where username='" + membername + "'),(select idUser from user where username='" +
-			groupOwner	+"'));";
+			+ groupName
+			+ "'), (select idUser from user where username='"
+			+ membername
+			+ "'),(select idUser from user where username='"
+			+ groupOwner + "'));";
 	console.log("Query is:" + query);
 	mysql.fetchData(function(err, results) {
 		if (err) {
 			throw err;
-			
-			
-			
+
 		} else {
-				console.log("success...");
-				res.end("success", "text");
+			console.log("success...");
+			res.end("success", "text");
 		}
 	}, query);
 
 }
-
-
 
 function saveToMySql(req, res) {
 	// console.log(req);
@@ -139,6 +136,8 @@ function saveToMySql(req, res) {
 	var i = 0;
 	var fromUser = "";
 	var album = "";
+	var caption = "";
+	var description = "";
 	do {
 		fromUser += s.charAt(i);
 		i++;
@@ -147,11 +146,32 @@ function saveToMySql(req, res) {
 			break;
 		}
 	} while (i < s.length);
-	for (var j = i; j < s.length; j++) {
-		album += s.charAt(j);
+
+	do {
+		album += s.charAt(i);
+		i++;
+		if (s.charAt(i) === '|') {
+			i++;
+			break;
+		}
+	} while (i < s.length);
+
+	do {
+		caption += s.charAt(i);
+		i++;
+		if (s.charAt(i) === '|') {
+			i++;
+			break;
+		}
+	} while (i < s.length);
+
+	for (var j = i; j < s.length - 1; j++) {
+		description += s.charAt(j);
 	}
 	console.log("fromUser: " + fromUser);
 	console.log("Album: " + album);
+	console.log("caption: " + caption + "---" + description);
+	console.log("description: " + description);
 	var query = "select * from album where AlbumName = '" + album
 			+ "' and owner = '" + fromUser + "'";
 
@@ -166,10 +186,12 @@ function saveToMySql(req, res) {
 							// response logic ...
 							console.log("success...");
 
-							var innerQuery = "insert into image(imageName, caption, path, fromUser, toUser, dateTime, flagRead, idAlbum) values ('"
+							var innerQuery = "insert into image(imageName, caption, description, path, fromUser, toUser, dateTime, flagRead, idAlbum) values ('"
 									+ file.name
 									+ "', '"
-									+ "caption"
+									+ caption
+									+ "', '"
+									+ description
 									+ "', 'uploads\\\\"
 									+ file.name
 									+ "', '"
@@ -228,12 +250,43 @@ function getImage(req, res) {
 
 }
 
+function searchImage(req, res) {
+	var caption = req.param("caption");
+	caption = caption.toLowerCase();
+	var username = req.param("username");
+	var query = "select im.imageName from image im, album_sharing ash where "
+			+ "(im.fromuser='" + username
+			+ "' or ash.iduser=(select iduser from user " + "where username='"
+			+ username + "')) and im.idalbum=ash.idAlbum and "
+			+ "im.caption LIKE '%" + caption + "%'";
+
+	console.log("Query is:" + query);
+	mysql.fetchData(function(err, results) {
+		if (err) {
+			throw err;
+		} else {
+			// response logic ...
+			console.log("success...");
+			if (results.length > 0) {
+				var files = [];
+				for (var i = 0; i < results.length; i++) {
+					files[i] = results[i].imageName;
+					console.log(files[i]);
+				}
+				var data = JSON.stringify(files);
+				res.end(data, 'text');
+			}
+		}
+	}, query);
+
+}
+
 function getListImages(req, res) {
-	
+
 	var albumName = req.param("albumName");
 	albumName = albumName.substring(1, albumName.length - 1);
 	var query = "select * from image where "; // where fromUser = '" +
-												// req.fromUser +
+	// req.fromUser +
 	// "'";
 
 	var query = "select i.imageName from image i, album a where AlbumName = '"
@@ -256,6 +309,32 @@ function getListImages(req, res) {
 				}
 				var data = JSON.stringify(files);
 				res.end(data, 'text');
+			}
+		}
+	}, query);
+
+}
+
+function getCaption(req, res) {
+
+	var imageName = req.param("imageName");
+	// imageName = imageName.substring(1, imageName.length - 1);
+
+	var query = "select caption from image where imageName = '" + imageName
+			+ "'";
+
+	console.log("Query is:" + query);
+	mysql.fetchData(function(err, results) {
+		if (err) {
+			throw err;
+		} else {
+			// response logic ...
+			console.log("success...");
+			if (results.length > 0) {
+				// var file = './uploads/icon_3dgallery_mini1430024637400.png';
+				caption = results[0].caption;
+
+				res.end(caption, 'text');
 			}
 		}
 	}, query);
@@ -288,19 +367,26 @@ function getListAlbum(req, res) {
 
 }
 
-
 function getSharedListAlbum(req, res) {
 
 	var finalAlbumList = [];
 
 	var query = "select al.albumName from user u, album_sharing a,album al where username= '"
 			+ req.param("username")
-			+ "' and u.idUser=a.idUser and a.idAlbum=al.idAlbum ;"
+			+ "' and u.idUser=a.idUser and a.idAlbum=al.idAlbum union select  al.AlbumName from user u, groupmembers gm,album_sharing_group asg,"
+			+ " album al where u.userName='"
+			+ req.param("username")
+			+ "' and u.iduser=gm.idmember and gm.idgroup=asg.idgroup and asg.idalbum=al.idAlbum;"
+
+	/*
+	 * var query = "select al.albumName from user u, album_sharing a,album al
+	 * where username= '" + req.param("username") + "' and u.idUser=a.idUser and
+	 * a.idAlbum=al.idAlbum ;"
+	 */
 
 	// var query = "select * from user where username = '" +
 	// req.param("username")
 	// + "'";
-
 	console.log("Query is:" + query);
 
 	mysql.fetchData(function(err, results) {
@@ -403,10 +489,10 @@ function getMyFriends(req, res) {
 }
 
 function getListGroups(req, res) {
-	
-	
-	var query = "select group_name from groupinfo where group_owner=(select iduser from user where username='" + req.param("username")+"');";
-			+ "'";
+
+	var query = "select group_name from groupinfo where group_owner=(select iduser from user where username='"
+			+ req.param("username") + "');";
+	+"'";
 
 	console.log("Query is:" + query);
 	var groups = [];
@@ -425,6 +511,56 @@ function getListGroups(req, res) {
 				var data = JSON.stringify(groups);
 				res.end(data, 'text');
 			}
+		}
+	}, query);
+
+}
+
+function shareAlbumGroup(req, res) {
+
+	var groupname = req.param("groupname");
+	var username = req.param("username");
+	var albumname = req.param("albumname");
+	console.log("Username" + username);
+	albumname = albumname.substring(1, albumname.length - 1);
+	groupname = groupname.substring(1, groupname.length - 1);
+
+	var query = "insert into album_sharing_group (idalbum,idgroup)  select (select idalbum from album where albumname='"
+			+ albumname
+			+ "' and owner='"
+			+ username
+			+ "') idalbum, idgroup from groupinfo where group_name='"
+			+ groupname
+			+ "'and group_owner=(select idUser from user where username='"
+			+ username
+			+ "') union select (select idalbum from album where albumname='"
+			+ albumname
+			+ "' and owner='"
+			+ username
+			+ "') idalbum,idgroup from groupmembers where idmember=(select idUser from user where username='"
+			+ username
+			+ "') and idowner in (select group_owner  from groupinfo where group_name='"
+			+ groupname + "'  );";
+
+	/*
+	 * var query = "insert into album_sharing_group (idalbum,idgroup) values
+	 * ((select idalbum from album where albumname='" + albumname + "' and
+	 * owner='"+ username +"'),(select idgroup from groupinfo where
+	 * group_name='"+ groupname+"' and group_owner=(select idUser from user
+	 * where username='" + username + "')))";
+	 */
+	console.log("Query is:" + query);
+	mysql.fetchData(function(err, results) {
+		if (err) {
+			throw err;
+		} else {
+			if (results.length > 0) {
+				console.log("success...");
+				res.end("success", "text");
+			} else {
+				res.end("Unable to create group", "text");
+			}
+
 		}
 	}, query);
 
@@ -545,13 +681,38 @@ function addFriend(req, res) {
 	}
 }
 
+function addComment(req, res) {
+	var imageName = req.param("imageName");
+	var username = req.param("username");
+	var comment = req.param("comment");
+
+	var query = "insert into comments values (select idImage from image where imageName='"
+			+ imageName + "'), '" + comment + "' , '" + username + "');";
+	console.log("Query is:" + query);
+	mysql.fetchData(function(err, results) {
+		if (err) {
+			throw err;
+		} else {
+			console.log("success...");
+			res.end("success", "text");
+		}
+	}, query);
+
+}
+
 function getGroupMembers(req, res) {
 	var groupname = req.param("groupname");
-	var username=req.param("username");
-	
-	
-	var query = "select (select username from user where iduser=gm.idmember) member_name from groupinfo gi, groupmembers gm where group_name='"+groupname+ "' and group_owner=(select iduser from user where username='" 
-		+ username + "' ) and gm.idowner=gi.group_owner and gm.idgroup=gi.idgroup;";
+	var username = req.param("username");
+	groupname = groupname.substring(1, groupname.length - 1);
+
+	var query = "select (select username from user where iduser=gm.idmember) member_name from groupinfo gi, groupmembers gm where group_name='"
+			+ groupname
+			+ "' and group_owner=(select iduser from user where username='"
+			+ username
+			+ "' ) and gm.idowner=gi.group_owner and gm.idgroup=gi.idgroup union select username from user where iduser in (select idmember from groupmembers where (idgroup,idowner) in (select idgroup,idowner from groupmembers where idmember=(select iduser from user where username='"
+			+ username
+			+ "' ) and  idgroup=(select idgroup from groupinfo where group_name='"
+			+ groupname + "')));";
 
 	console.log("Query is:" + query);
 	var members = [];
@@ -568,6 +729,35 @@ function getGroupMembers(req, res) {
 					console.log(members[i]);
 				}
 				var data = JSON.stringify(members);
+				res.end(data, 'text');
+			}
+		}
+	}, query);
+
+}
+
+function getAllGroups(req, res) {
+
+	var query = "select gi.group_name from groupinfo gi  where group_owner=(select iduser from  user where username='"
+			+ req.param("username")
+			+ "') union select gi.group_name from groupmembers gm,groupinfo gi  where idmember=(select iduser from  user where username='"
+			+ req.param("username") + "') and gm.idgroup=gi.idgroup";
+
+	console.log("Query is:" + query);
+	var all_groups = [];
+	mysql.fetchData(function(err, results) {
+		if (err) {
+			throw err;
+		} else {
+			// response logic ...
+			console.log("success...");
+			if (results.length > 0) {
+				// var file = './uploads/icon_3dgallery_mini1430024637400.png';
+				for (var i = 0; i < results.length; i++) {
+					all_groups[i] = results[i].group_name;
+					console.log(all_groups[i]);
+				}
+				var data = JSON.stringify(all_groups);
 				res.end(data, 'text');
 			}
 		}
@@ -621,8 +811,14 @@ exports.addFriend = addFriend;
 exports.getMyFriends = getMyFriends;
 exports.shareAlbum = shareAlbum;
 exports.getSharedListAlbum = getSharedListAlbum;
-exports.createGroup=createGroup;
-exports.addGroupMember=addGroupMember;
-exports.getListGroups=getListGroups;
-exports.createAlbum=createAlbum;
-exports.getGroupMembers=getGroupMembers;
+exports.createGroup = createGroup;
+exports.addGroupMember = addGroupMember;
+exports.getListGroups = getListGroups;
+exports.createAlbum = createAlbum;
+exports.getGroupMembers = getGroupMembers;
+exports.searchImage = searchImage;
+exports.getAllGroups = getAllGroups;
+exports.searchImage = searchImage;
+exports.shareAlbumGroup = shareAlbumGroup;
+exports.getCaption = getCaption;
+exports.addComment = addComment;

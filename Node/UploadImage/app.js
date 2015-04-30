@@ -68,8 +68,12 @@ app.post('/addGroupMember',home.addGroupMember);
 app.get('/getListGroups',home.getListGroups);
 app.post('/createAlbum',home.createAlbum);
 app.get('/getGroupMembers',home.getGroupMembers);
-
-
+app.post('/searchImage', home.searchImage);
+app.get('/getAllGroups',home.getAllGroups);
+app.get('/searchImage', home.searchImage);
+app.post('/shareAlbumGroup',home.shareAlbumGroup);
+app.get('/getCaption', home.getCaption);
+app.post('/addComment', home.addComment);
 /*
 app.get('/', home.upload);
 app.post('/signIn', home.signIn);
