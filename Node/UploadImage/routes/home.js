@@ -82,6 +82,28 @@ function createAlbum(req, res) {
 
 }
 
+
+
+function addMember(req,res,groupName,groupOwner){
+
+	var groupName = groupName;
+	var groupOwner = groupOwner;
+
+	var query = "insert into groupmembers  (idgroup,idmember,idowner) values ((select idgroup from groupinfo where group_name='"
+		+groupName+"' and group_owner=(select iduser from user where username='"+groupOwner+"')),(select iduser from user where username='"+groupOwner+"'),(select iduser from user where username='"+groupOwner+"'))";
+	console.log("Query is:" + query);
+	mysql.fetchData(function(err, results) {
+		if (err) {
+			throw err;
+		} else {
+			console.log("success...");
+			//res.end("success", "text");
+		}
+	}, query);
+
+	
+}
+
 function createGroup(req, res) {
 	var groupName = req.param("groupname");
 	var groupOwner = req.param("username");
@@ -95,9 +117,14 @@ function createGroup(req, res) {
 			throw err;
 		} else {
 			console.log("success...");
+			addMember(req,res,groupName,groupOwner);
 			res.end("success", "text");
 		}
 	}, query);
+	
+	
+	
+	
 
 }
 
@@ -257,7 +284,7 @@ function searchImage(req, res) {
 	var query = "select im.imageName from image im, album_sharing ash where "
 			+ "(im.fromuser='" + username
 			+ "' or ash.iduser=(select iduser from user " + "where username='"
-			+ username + "')) and im.idalbum=ash.idAlbum and "
+			+ username + "'))  and "
 			+ "im.caption LIKE '%" + caption + "%'";
 
 	console.log("Query is:" + query);
@@ -516,6 +543,8 @@ function getListGroups(req, res) {
 
 }
 
+
+
 function shareAlbumGroup(req, res) {
 
 	var groupname = req.param("groupname");
@@ -539,7 +568,7 @@ function shareAlbumGroup(req, res) {
 			+ username
 			+ "') idalbum,idgroup from groupmembers where idmember=(select idUser from user where username='"
 			+ username
-			+ "') and idowner in (select group_owner  from groupinfo where group_name='"
+			+ "') and idgroup in (select idgroup  from groupinfo where group_name='"
 			+ groupname + "'  );";
 
 	/*
